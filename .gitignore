@@ -1,0 +1,5 @@
+data_train/
+data_test/
+__pycache__/
+log/
+.DS_Store
