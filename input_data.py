@@ -1,6 +1,7 @@
 from PIL import Image
 import numpy
 import re
+import os
 import glob
 
 def single_sparse_label(raw_label, digit_index):
@@ -12,26 +13,27 @@ def single_sparse_label(raw_label, digit_index):
 
 def full_sparse_label(raw_label):
     sparse_indices = numpy.zeros(shape=(54))
-    for digit_index in range(0, 5):
+    for digit_index in range(0, 6):
         raw_digit = list(raw_label)[digit_index]
         sparse_index = (int(raw_digit) - 1) + (digit_index * 9)
         sparse_indices[sparse_index] = 1
     return sparse_indices
 
 def extract_image(filename, digit_index):
-    # print('Extracting image:', filename)
+    if os.path.isfile(filename + '.npy'):
+        return numpy.load(filename + '.npy')
     image = Image.open(filename)
     image = numpy.array(image.getdata()).reshape(image.size[0], image.size[1], 3)
     image = image[15:155]
-    # image = image[90:130]
     image = 1. - numpy.sum(image, axis=-1) / 765
+    numpy.save(filename + '.npy', image)
     return image
 
 def extract_label(filename, digit_index):
     # print('Extracting label:', filename)
     m = re.search('(\d{6})', filename)
     label = None
-    if digit_index:
+    if digit_index != None:
         label = single_sparse_label(m.group(0), digit_index)
     else:
         label = full_sparse_label(m.group(0))
@@ -101,7 +103,7 @@ class DataSet(object):
     end = self._index_in_epoch
     return self._images[start:end], self._labels[start:end]
 
-def read_data_sets(digit_index=False):
+def read_data_sets(digit_index=None):
     class DataSets(object):
         pass
     data_sets = DataSets()

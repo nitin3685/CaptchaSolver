@@ -6,7 +6,7 @@ captcha = input_data.read_data_sets()
 # Parameters
 learning_rate = 1e-3
 training_iters = 40000
-batch_size = 100
+batch_size = 200
 display_step = 1
 
 width = 140
@@ -111,9 +111,9 @@ with tf.Session() as sess:
         current_accuracy = 0
         while current_accuracy < min_accuracy:
             sess.run(optimizer, feed_dict={x: batch_xs, y: batch_ys, keep_prob: dropout})
-            current_accuracy = sess.run(tf.reduce_min(accuracy), feed_dict={x: batch_xs, y: batch_ys, keep_prob: 1.})
-            print(current_accuracy, end='; ', flush=True)
-        # print()
+            current_accuracy, current_cost = sess.run([tf.reduce_min(accuracy), tf.reduce_min(cost)],
+                    feed_dict={x: batch_xs, y: batch_ys, keep_prob: 1.})
+            print(current_accuracy, current_cost, min_accuracy)
         if min_accuracy < 0.9:
             min_accuracy += 0.005
         if step % display_step == 0:
