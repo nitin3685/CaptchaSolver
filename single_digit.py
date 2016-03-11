@@ -1,11 +1,13 @@
-# Import data
 import tensorflow as tf
+import pdb
+
+# Import data
 import input_data
-captcha = input_data.read_data_sets(4)
+captcha = input_data.read_data_sets(0)
 
 # Parameters
-learning_rate = 1e-4
-training_iters = 10000
+learning_rate = 1e-3
+training_iters = 40000
 batch_size = 50
 display_step = 1
 display_test = 20
@@ -32,6 +34,7 @@ def max_pool(img, k):
 
 def conv_net(_X, _weights, _biases, _dropout):
     # _X = tf.nn.relu(tf.add(_X, _biases['b1']))
+
     # Reshape input picture
     _X = tf.reshape(_X, shape=[-1, width, height, 1])
 
@@ -67,9 +70,9 @@ weights = {
 }
 
 biases = {
-    'b1':  tf.Variable(tf.constant(-0.05, shape=[width * height])),
+    # 'b1':  tf.Variable(tf.constant(-0.05, shape=[width * height])),
     'bc1': tf.Variable(tf.constant(0.01, shape=[32])),
-    'bc2': tf.Variable(tf.constant(0.01, shape=[64])),
+    'bc2': tf.Variable(tf.constant(0.001, shape=[64])),
     'bd1': tf.Variable(tf.constant(0.01, shape=[1024])),
     'out': tf.Variable(tf.constant(0.01, shape=[n_classes]))
 }
@@ -79,6 +82,7 @@ tf.histogram_summary("wc1",   weights["wc1"])
 tf.histogram_summary("wc2",   weights["wc2"])
 tf.histogram_summary("wd1",   weights["wd1"])
 tf.histogram_summary("w_out", weights["out"])
+# tf.histogram_summary("b1",   biases["b1"])
 tf.histogram_summary("bc1",   biases["bc1"])
 tf.histogram_summary("bc2",   biases["bc2"])
 tf.histogram_summary("bd1",   biases["bd1"])
@@ -106,40 +110,65 @@ init = tf.initialize_all_variables()
 acc_list = []
 loss_list = []
 
+def learn_by_accuracy():
+    with tf.Session() as sess:
+        # Merge all the summaries and write them out to /tmp/mnist_logs
+        merged = tf.merge_all_summaries()
+        writer = tf.train.SummaryWriter("./log", sess.graph.as_graph_def(add_shapes=True))
+        # Run sesssion
+        sess.run(init)
+        step = 1
+
+        min_accuracy = 0.15
+        test_accuracy = 0.
+        while test_accuracy < 0.95:
+            batch_xs, batch_ys = captcha.train.next_batch(batch_size)
+
+            current_accuracy = 0
+            max_iterations = 0
+            while current_accuracy < min_accuracy and max_iterations < 7:
+                max_iterations += 1
+                sess.run(optimizer, feed_dict={x: batch_xs, y: batch_ys, keep_prob: dropout})
+                current_accuracy, current_cost = sess.run([accuracy, cost], feed_dict={x: batch_xs, y: batch_ys, keep_prob: 1.})
+                print(current_accuracy, current_cost, min_accuracy)
+
+            if min_accuracy < 0.95 and max_iterations < 7:
+                min_accuracy += 0.005
+            if step % display_step == 0:
+                # Calculate batch accuracy and loss
+                summary, _, _ = sess.run([merged, accuracy, cost], feed_dict={x: batch_xs, y: batch_ys, keep_prob: 1.})
+                writer.add_summary(summary, step)
+            test_accuracy = sess.run(accuracy, feed_dict={x: captcha.test.images[:450], y: captcha.test.labels[:450], keep_prob: 1.})
+            print("Testing Accuracy:", test_accuracy)
+            step += 1
+        print("Optimization Finished!")
+        # Calculate accuracy for 256 captcha test images
+        print("Testing Accuracy:", sess.run(accuracy, feed_dict={x: captcha.test.images[:450], y: captcha.test.labels[:450], keep_prob: 1.}))
+
+
+def learn_by_examples():
+    with tf.Session() as sess:
+        # Merge all the summaries and write them out to /tmp/mnist_logs
+        merged = tf.merge_all_summaries()
+        writer = tf.train.SummaryWriter("./log", sess.graph.as_graph_def(add_shapes=True))
+        # Run sesssion
+        sess.run(init)
+        step = 1
+        # Keep training until reach max iterations
+        while step * batch_size < training_iters:
+            batch_xs, batch_ys = captcha.train.next_batch(batch_size)
+            # Fit training using batch data
+            sess.run(optimizer, feed_dict={x: batch_xs, y: batch_ys, keep_prob: dropout})
+            if step % display_step == 0:
+                # Calculate batch accuracy and loss
+                summary, _, _ = sess.run([merged, accuracy, cost], feed_dict={x: batch_xs, y: batch_ys, keep_prob: 1.})
+                writer.add_summary(summary, step)
+            step += 1
+        print("Optimization Finished!")
+        # Calculate accuracy for 256 captcha test images
+        print("Testing Accuracy:", sess.run(accuracy, feed_dict={x: captcha.test.images[:450], y: captcha.test.labels[:450], keep_prob: 1.}))
+
+
 print("Optimization Started!")
 # Launch the graph
-with tf.Session() as sess:
-    # Merge all the summaries and write them out to /tmp/mnist_logs
-    merged = tf.merge_all_summaries()
-    writer = tf.train.SummaryWriter("./log", sess.graph.as_graph_def(add_shapes=True))
-    # Run sesssion
-    sess.run(init)
-    step = 1
-    # Keep training until reach max iterations
-    while step * batch_size < training_iters:
-        batch_xs, batch_ys = captcha.train.next_batch(batch_size)
-        # Fit training using batch data
-        sess.run(optimizer, feed_dict={x: batch_xs, y: batch_ys, keep_prob: dropout})
-        if step % display_step == 0:
-            # Calculate batch accuracy and loss
-            summary, _, _ = sess.run([merged, accuracy, cost], feed_dict={x: batch_xs, y: batch_ys, keep_prob: 1.})
-            writer.add_summary(summary, step)
-        step += 1
-    print("Optimization Finished!")
-    # Calculate accuracy for 256 captcha test images
-    print("Testing Accuracy:", sess.run(accuracy, feed_dict={x: captcha.test.images[:450], y: captcha.test.labels[:450], keep_prob: 1.}))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+learn_by_examples()

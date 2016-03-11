@@ -3,3 +3,7 @@ data_test/
 __pycache__/
 log/
 .DS_Store
+log/
+seeds/
+export/
+*.pyc
