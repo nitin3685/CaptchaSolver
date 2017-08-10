@@ -105,7 +105,7 @@ with tf.name_scope("AccuracyScope") as scope:
     tf.scalar_summary("accuracy", accuracy)
 
 # Initializing the variables
-init = tf.initialize_all_variables()
+init = tf.global_variables_initializer()
 
 acc_list = []
 loss_list = []

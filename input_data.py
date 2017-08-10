@@ -22,7 +22,8 @@ def full_sparse_label(raw_label):
 def extract_image(filename, digit_index):
     if os.path.isfile(filename + '.npy'):
         return numpy.load(filename + '.npy')
-    image = Image.open(filename)
+    png_image=Image.open(filename)
+    image=Image.composite(png_image, Image.new('RGB', png_image.size, 'white'), png_image)
     image = numpy.array(image.getdata()).reshape(image.size[0], image.size[1], 3)
     image = image[15:155]
     image = 1. - numpy.sum(image, axis=-1) / 765
@@ -49,10 +50,13 @@ def extract_images(filenames, digit_index):
         images.append(extract_image(f, digit_index))
     return numpy.array(images)
 
-def extract_labels(filenames, digit_index):
+def extract_labels(answer_filename, digit_index):
     labels = []
-    for f in filenames:
-        labels.append(extract_label(f, digit_index))
+    train_label_file = open(answer_filename,"r")
+    for line in train_label_file:
+        labels.append(line.rstrip()) 
+#    for f in filenames:
+#        labels.append(extract_label(f, digit_index))
     return numpy.array(labels)
 
 class DataSet(object):
@@ -63,6 +67,7 @@ class DataSet(object):
     self._num_examples = images.shape[0]
     # Convert shape from [num examples, rows, columns, depth]
     # to [num examples, rows*columns] (assuming depth == 1)
+    print (images.shape[0])
     images = images.reshape(images.shape[0],
                             images.shape[1] * images.shape[2])
     # Convert from [0, 255] -> [0.0, 1.0].
@@ -93,12 +98,14 @@ class DataSet(object):
       self._epochs_completed += 1
       # Shuffle the data
       perm = numpy.arange(self._num_examples)
-      numpy.random.shuffle(perm)
+      numpy.random.shuffle(perm)  # @UndefinedVariable
       self._images = self._images[perm]
       self._labels = self._labels[perm]
       # Start next epoch
       start = 0
       self._index_in_epoch = batch_size
+      print (batch_size)
+      print (self._num_examples)
       assert batch_size <= self._num_examples
     end = self._index_in_epoch
     return self._images[start:end], self._labels[start:end]
@@ -109,16 +116,16 @@ def read_data_sets(digit_index=None):
     data_sets = DataSets()
 
     print("Extract train images")
-    train_filenames = numpy.array(glob.glob("./data_train/*.jpg"))
+    train_filenames = numpy.array(glob.glob("./data_train/*.png"))
     numpy.random.shuffle(train_filenames)
     train_images = extract_images(train_filenames, digit_index)
-    train_labels = extract_labels(train_filenames, digit_index)
+    train_labels = extract_labels("./data_train/ans.txt", digit_index)
 
     print("Extract test images")
-    test_filenames = numpy.array(glob.glob("./data_test/*.jpg"))
+    test_filenames = numpy.array(glob.glob("./data_test/*.png"))
     numpy.random.shuffle(test_filenames)
     test_images = extract_images(test_filenames, digit_index)
-    test_labels = extract_labels(test_filenames, digit_index)
+    test_labels = extract_labels("./data_train/ans.txt", digit_index)
 
     data_sets.train = DataSet(train_images, train_labels)
     data_sets.test = DataSet(test_images, test_labels)

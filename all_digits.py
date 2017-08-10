@@ -6,7 +6,7 @@ captcha = input_data.read_data_sets()
 # Parameters
 learning_rate = 1e-3
 training_iters = 40000
-batch_size = 200
+batch_size = 100
 display_step = 1
 
 width = 140
@@ -83,14 +83,23 @@ biases = {
 pred = conv_net(x, weights, biases, keep_prob)
 
 # Define loss and optimizer
-pred_digits = tf.split(1, 6, pred)
-y_digits = tf.split(1, 6, y)
-cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(pred_digits[0], y_digits[0]))
-cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(pred_digits[1], y_digits[1]))
-cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(pred_digits[2], y_digits[2]))
-cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(pred_digits[3], y_digits[3]))
-cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(pred_digits[4], y_digits[4]))
-cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(pred_digits[5], y_digits[5]))
+pred_digits = tf.split(pred, 6, 1)
+y_digits = tf.split(y, 6, 1)
+
+cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred_digits[0], labels=y_digits[0]))
+cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred_digits[1], labels=y_digits[1]))
+cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred_digits[2], labels=y_digits[2]))
+cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred_digits[3], labels=y_digits[3]))
+cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred_digits[4], labels=y_digits[4]))
+cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred_digits[5], labels=y_digits[5]))
+
+#TODO : Need to check what is label and logit and which one is what. For now above one seems to work
+#cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=pred_digits[0], logits=y_digits[0]))
+#cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=pred_digits[1], logits=y_digits[1]))
+#cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=pred_digits[2], logits=y_digits[2]))
+#cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=pred_digits[3], logits=y_digits[3]))
+#cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=pred_digits[4], logits=y_digits[4]))
+#cost += tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=pred_digits[5], logits=y_digits[5]))
 #cost = tf.nn.l2_loss(pred - y)
 
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
@@ -99,7 +108,7 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 correct_pred = tf.equal(tf.argmax(tf.reshape(pred, [-1, 6, 9]),2), tf.argmax(tf.reshape(y, [-1, 6, 9]),2))
 accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32), 0)
 
-init = tf.initialize_all_variables()
+init = tf.global_variables_initializer()
 
 with tf.Session() as sess:
     sess.run(init)
